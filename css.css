@@ -1,0 +1,37 @@
+#canvas{
+    border-radius: 10px;
+    box-shadow: 0 10px 10px -5px #000000aa, inset 0 0 20px 0px #00000033;
+    background-color: green;
+    position: relative;
+}
+
+body{
+    background-color: #555;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+}
+/*
+#field, #goal{
+    position: absolute;
+}
+#field{
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+}
+#goal{
+    width: 200px;
+    top: 20px;
+    left: 50px;
+}
+*/
+#ball, #character, #field, #goal{
+    display: none;
+}
