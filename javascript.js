@@ -1,3 +1,5 @@
+var dev = false;
+
 const pageWidth = document.body.clientWidth;
 const pageHeight = document.body.clientHeight;
 
@@ -8,6 +10,11 @@ const canvasHeight = canvas.height = 600;
 const sizeMultiplier = 0.5;
 
 const ctx = canvas.getContext('2d');
+
+let score = 0;
+ctx.font = "bold 30px Trebuchet MS";
+ctx.textAlign = "center";
+ctx.fillStyle = "white";
 
 const mouse = {
     x: 0,
@@ -32,179 +39,153 @@ const graphics = {
   },
   player: {
     graphic: document.getElementById('character'),
-    width: 180,
-    height: 240,
     size: [180, 240],
+    hitboxHeight: 10,
+    kickStrength: 5,
   },
-  characters: {
+  opponents: {
     graphic: document.getElementById('character'),
     players: [
       {
         position: [100, 60],
         size: [180, 240],
-        localSizeMultiplier: 1,
-        patrol: [70, 120],
-        speed: [5, 5],
+        speed: 2,
+        speedDecrementor: 0.2,
+        travelTime: 1.5,
+        travelTimeDecrementor: 0.2,
       },
       /*
       {
         position: [200, 200],
         size: [180, 240],
-        localSizeMultiplier: 1,
-        patrol: [100, 180],
-        speed: [10, 10],
+        speed: 10,
       },
       */
     ],
   }
 };
 
+
 class Goal{
-  constructor(graphic, position, size, localSize){
+  constructor(graphic, position, size){
     
     this.graphic = graphic;
     this.position = position;
     this.size = size;
 
-    this.localSizeMultiplier = localSize;
-    this.xOffset = this.size[0] / 2 * this.localSizeMultiplier;
-    this.yOffset = this.size[1] / 2 * this.localSizeMultiplier;
+    this.xOffset = this.size[0] / 2;
+    this.yOffset = this.size[1] / 2;
 
     this.CalculateHitbox();
-    this.DrawGoal();
   }
   
   graphic;
   position;
   size;
 
-  localSizeMultiplier;
   xOffset;
   yOffset;
 
   hitBox = {
-    tl: [],
-    tr: [],
-    br: [],
-    bl: [],
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   };
 
   CalculateHitbox(){
     this.hitBox =
     {
-      tl:[
-        this.position[0] - this.xOffset + 5,
-        this.position[1] - this.yOffset],
-      tr:[
+      top:
+        this.position[1] - this.yOffset,
+      right:
         this.position[0] + this.xOffset - 5,
-        this.position[1] - this.yOffset],
-      br:[
-        this.position[0] + this.xOffset - 5,
-        this.position[1] + this.yOffset - 5],
-      bl:[
+      bottom:
+        this.position[1] + this.yOffset - 5,
+      left:
         this.position[0] - this.xOffset + 5,
-        this.position[1] + this.yOffset - 5],
     };
   }
 
   DrawGoal(){
+    this.CalculateHitbox();
     
-    ctx.beginPath();
-    ctx.moveTo(this.hitBox.tl[0], this.hitBox.tl[1]);
-    ctx.lineTo(this.hitBox.tr[0], this.hitBox.tr[1]);
-    ctx.lineTo(this.hitBox.br[0], this.hitBox.br[1]);
-    ctx.lineTo(this.hitBox.bl[0], this.hitBox.bl[1]);
-    ctx.closePath();
-    ctx.stroke();
+    if(dev)
+    {
+      ctx.beginPath();
+      ctx.moveTo(this.hitBox.left, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
+      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.closePath();
+      ctx.stroke();
+    }
 
-    ctx.drawImage(graphics.goal.graphic, this.position[0] - this.xOffset, this.position[1] - this.yOffset, this.size[0], this.size[1]);
+    ctx.drawImage(this.graphic, this.position[0] - this.xOffset, this.position[1] - this.yOffset, this.size[0], this.size[1]);
   }
 
 }
 
 class Player{
-  constructor(){
-    this.width = graphics.player.width;
-    this.height = graphics.player.height;
+  constructor(graphic, size, hitboxHeight, kickStrength){
+    this.graphic = graphic;
+    this.size = size;
+    this.hitboxHeight = hitboxHeight;
+    this.kickStrength = kickStrength;
 
     this.CalculateHitBox();
   }
 
-  width;
-  height;
+  graphic;
+  size;
   hitboxHeight = 10;
   kicking = false;
   holding = false;
-  kickStrength = -5;
+  kickStrength;
 
   hitbox = {
-    tl: null,
-    tr: null,
-    br: null,
-    bl: null,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   }
 
   CalculateHitBox(){
-    this.hitbox.tl = [mouse.x - this.width/3 * sizeMultiplier, mouse.y - this.hitboxHeight * sizeMultiplier]
-    this.hitbox.tr = [mouse.x + this.width/3 * sizeMultiplier, mouse.y - this.hitboxHeight * sizeMultiplier]
-    this.hitbox.br = [mouse.x + this.width/3 * sizeMultiplier, mouse.y]
-    this.hitbox.bl = [mouse.x - this.width/3 * sizeMultiplier, mouse.y]
+    this.hitbox = {
+      top: mouse.y - this.hitboxHeight * sizeMultiplier,
+      right: mouse.x + this.size[0] / 2 * 0.6 * sizeMultiplier,
+      bottom: mouse.y,
+      left: mouse.x - this.size[0] / 2 * 0.6 * sizeMultiplier,
+    }
   }
 
   DrawPlayer() {
 
     this.CalculateHitBox();
-    // hitbox
-    ctx.beginPath();
-    ctx.moveTo(this.hitbox.tl[0], this.hitbox.tl[1]);
-    ctx.lineTo(this.hitbox.tr[0], this.hitbox.tr[1]);
-    ctx.lineTo(this.hitbox.br[0], this.hitbox.br[1]);
-    ctx.lineTo(this.hitbox.bl[0], this.hitbox.bl[1]);
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(mouse.x, mouse.y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = 'orange';
-    ctx.fill();
-
-    ctx.drawImage(graphics.player.graphic, (mouse.x - this.width/2 * sizeMultiplier), (mouse.y - this.height*sizeMultiplier), this.width * sizeMultiplier, this.height * sizeMultiplier)
-  }
-
-  CatchBall(ballObject){
-    if(!this.kicking)
+    if(dev)
     {
-      if(this.hitbox.tr[0] > ballObject.hitBox.tl[0] && this.hitbox.bl[1] > ballObject.hitBox.tl[1] && this.hitbox.tl[0] < ballObject.hitBox.tr[0] && this.hitbox.tl[1] < ballObject.hitBox.br[1])
-      {
-        /*
-        ctx.beginPath();
-        ctx.arc(ballObject.position[0], ballObject.position[1], 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'orange';
-        ctx.fill();
-*/
-        player.holding = true;
-        ballObject.speed = [0, 0];
-      }
-    }
-  }
-
-  HoldBall(ballObject)
-  {
-    if(this.kicking)
-    {
-      this.holding = false;
+      // hitbox
+      ctx.beginPath();
+      ctx.moveTo(this.hitbox.left, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.bottom);
+      ctx.lineTo(this.hitbox.left, this.hitbox.bottom);
+      ctx.closePath();
+      ctx.stroke();
+  
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'orange';
+      ctx.fill();
     }
 
-    if(this.holding)
-    {
-      ballObject.position = [mouse.x, mouse.y - ballObject.size[1]/2 * sizeMultiplier];
-    }
+    ctx.drawImage(this.graphic, (mouse.x - this.size[0] / 2 * sizeMultiplier), (mouse.y - this.size[1] * sizeMultiplier), this.size[0] * sizeMultiplier, this.size[1] * sizeMultiplier)
   }
 
   Kick(ballObject){
     console.log(ballObject.position);
-    ballObject.speed = this.kickStrength;
-    //ballObject.MoveBall();
+    ballObject.speed = -this.kickStrength;
+
     this.holding = false;
     this.kicking = true;
     setTimeout(() => this.kicking = false, 100);
@@ -212,64 +193,102 @@ class Player{
 }
 
 class Character {
-  constructor(graphic, position, size, localSize = 1)
+  constructor(graphic, position, size, speed, speedDecrementor, travelTime, travelTimeDecrementor)
   {
     this.graphic = graphic;
     this.position = position;
+    this.patrolPosition = canvasWidth - position[0];
     this.size = size;
-    this.localSizeMultiplier = localSize;
+    this.speed = speed;
+    this.tempSpeed = speed;
+    this.speedDecrementor = speedDecrementor;
+    this.travelTime = travelTime;
+    this.travelTimeDecrementor = travelTimeDecrementor;
 
-    this.xOffset = this.size[0] / 2 * this.localSizeMultiplier * sizeMultiplier;
-    this.yOffset = this.size[1] / 2 * this.localSizeMultiplier * sizeMultiplier;
+    this.xOffset = this.size[0] / 2 * sizeMultiplier;
+    this.yOffset = this.size[1] / 2 * sizeMultiplier;
     this.CalculateHitbox();
   }
 
   graphic;
-  size;
-  localSizeMultiplier;
-  position;
-  xOffset;
-  yOffset;
-  kickStrength;
+  position = [];
+  size = [];
+  speed = 0;
+
+  xOffset = 0;
+  yOffset = 0;
   
-  hitBox;
-  kicking = false; // a short delay after the player clicks for the ball not to instantly snap to the cursor again
-  holding = false; // is the ball stuck to the player character
+  hitBox = {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  };
+
+  patrolPosition = 0;
+  tempSpeed = 0;
+
+  travelTime = 2;
+  travelTimeTemp = this.travelTime;
+  travelTimeDecrementor = 0.1;
+  speedDecrementor = 0.2;
 
   CalculateHitbox(){
     this.hitBox =
     {
-      tl:[
-        this.position[0] - this.xOffset,
-        this.position[1] - this.yOffset],
-      tr:[
+      top:
+        this.position[1] - this.yOffset,
+      right:
         this.position[0] + this.xOffset,
-        this.position[1] - this.yOffset],
-      br:[
-        this.position[0] + this.xOffset,
-        this.position[1] + this.yOffset],
-      bl:[
+      bottom:
+        this.position[1] + this.yOffset,
+      left:
         this.position[0] - this.xOffset,
-        this.position[1] + this.yOffset],
     }
   }
 
   DrawCharacter(){
-    // hitbox
-    ctx.beginPath();
-    ctx.moveTo(this.hitBox.tl[0], this.hitBox.tl[1]);
-    ctx.lineTo(this.hitBox.tr[0], this.hitBox.tr[1]);
-    ctx.lineTo(this.hitBox.br[0], this.hitBox.br[1]);
-    ctx.lineTo(this.hitBox.bl[0], this.hitBox.bl[1]);
-    ctx.closePath();
-    ctx.stroke();
-
     this.CalculateHitbox();
-    ctx.drawImage(this.graphic, this.hitBox.tl[0], this.hitBox.tl[1], this.size[0] * sizeMultiplier * this.localSizeMultiplier, this.size[1] * sizeMultiplier * this.localSizeMultiplier)
-  }
+    
+    if(dev)
+    {
+      // hitbox
+      ctx.beginPath();
+      ctx.moveTo(this.hitBox.left, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
+      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.closePath();
+      ctx.stroke();
+    }
 
+    ctx.drawImage(this.graphic, this.position[0] - this.xOffset, this.position[1] - this.yOffset, this.size[0] * sizeMultiplier, this.size[1] * sizeMultiplier);
+  }
   PatrolCharacter(){
 
+    this.position[0] += this.tempSpeed;
+    this.travelTimeTemp -= this.travelTimeDecrementor;
+
+    if(this.travelTimeTemp < 0)
+    {
+      if(this.tempSpeed > 0)
+      {
+        this.tempSpeed -= this.speedDecrementor;
+        if(this.tempSpeed < 0)
+        {
+          this.tempSpeed = -this.speed;
+        }
+      }
+      else if(this.tempSpeed < 0)
+      {
+        this.tempSpeed += this.speedDecrementor;
+        if(this.tempSpeed > 0)
+        {
+          this.tempSpeed = this.speed;
+        }
+      }
+      this.travelTimeTemp = this.travelTime;
+    }
   }
 }
   
@@ -293,231 +312,209 @@ class Ball{
   xOffset;
   yOffset;
   hitBox = {
-    tl: null,
-    tr: null,
-    br: null,
-    bl: null,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   };
 
   speedDecelerator = 0.1;
   scoring = false;
+
+  ballRotation = 0;
 
   DrawBall()
   {
     this.CalculateHitbox();
     //console.log(this.hitBox);
 
-    // Draw Hitbox
-    ctx.beginPath();
-    ctx.moveTo(this.hitBox.tl[0], this.hitBox.tl[1]);
-    ctx.lineTo(this.hitBox.tr[0], this.hitBox.tr[1]);
-    ctx.lineTo(this.hitBox.br[0], this.hitBox.br[1]);
-    ctx.lineTo(this.hitBox.bl[0], this.hitBox.bl[1]);
-    ctx.closePath();
-    ctx.stroke();
-
+    if(dev)
+    {
+      // Draw Hitbox
+      ctx.beginPath();
+      ctx.moveTo(this.hitBox.left, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.top);
+      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
+      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    /*
+    ctx.save();
+    ctx.translate(this.position[0] - this.xOffset, this.position[1] - this.yOffset);
+    
+    ctx.rotate(5 * this.ballRotation * Math.PI / 180);
+    ctx.drawImage(this.graphic, -this.xOffset, -this.yOffset, graphics.ball.size[0] * sizeMultiplier, graphics.ball.size[1]*sizeMultiplier);
+    ctx.restore();
+    */
+    
     ctx.drawImage(this.graphic, this.position[0] - this.xOffset, this.position[1] - this.yOffset, this.size[0] * sizeMultiplier, this.size[1] * sizeMultiplier);
   }
 
-  MoveBall(){
-    if(!player.holding){
+  MoveBall()
+  {
+    if(player.holding)
+    {
+      this.speed = 0;
+      this.position = [mouse.x, mouse.y - this.size[1]/2 * sizeMultiplier];
+      if(!player.kicking)
+      {
+        this.holding = false;
+      }
+    }
+    else
+    {
       this.position[1] += this.speed;
+      //this.ballRotation = 5;
+      
       if(this.speed > 0)
       {
         this.speed -= this.speedDecelerator;
+        //this.ballRotation -= 1;
         if(this.speed < 0)
-          this.speed = 0;
+        this.speed = 0;
       }
       else if(this.speed < 0)
       {
         this.speed += this.speedDecelerator;
+        //this.ballRotation += 1;
         if(this.speed > 0)
-          this.speed = 0;
+        this.speed = 0;
+      }
+      
+      if(this.hitBox.top < goal.hitBox.bottom &&
+        this.hitBox.right > goal.hitBox.left &&
+        this.hitBox.left < goal.hitBox.right)
+      {
+        if(this.scoring)
+          return;
+        this.scoring = true;
+        this.Score();
       }
     }
-
   }
 
-  CalculateHitbox(){
+  CatchBall()
+  {
+    if(!player.kicking)
+    {
+      if(player.hitbox.bottom > this.hitBox.top &&
+      player.hitbox.right > this.hitBox.left &&
+      player.hitbox.top < this.hitBox.bottom &&
+      player.hitbox.left < this.hitBox.right)
+      {
+        player.holding = true;
+      }
+    }
+  }
+
+  CalculateHitbox()
+  {
     this.hitBox =
     {
-      tl:[
-        this.position[0] - this.xOffset,
-        this.position[1] - this.yOffset],
-      tr:[
+      top:
+        this.position[1] - this.yOffset,
+      right:
         this.position[0] + this.xOffset,
-        this.position[1] - this.yOffset],
-      br:[
-        this.position[0] + this.xOffset,
-        this.position[1] + this.yOffset],
-      bl:[
+      bottom:
+        this.position[1] + this.yOffset,
+      left:
         this.position[0] - this.xOffset,
-        this.position[1] + this.yOffset],
     }
   }
-
-  Score(goalObject, playerObject){
-    if(!playerObject.holding)
-    {
-      // Match boundaries with hitbox to 'detect' boundaries and invert speed for that axis if needed
-      if(this.hitBox.tl[1] < goalObject.hitBox.bl[1] && this.hitBox.tl[0] > goalObject.hitBox.tl[0] && this.hitBox.tr[0] < goalObject.hitBox.tr[0])
-      {
-        console.log('goal');
-        this.speedDecelerator = 0.2;
-        //this.speed *= -1;
-        this.scoring = true;
-        setTimeout(() => this.speed = -10, 500);
-        setTimeout(() => this.ResetBall(), 1000);
-      }
-    }
-  }
-  
-  ResetBall(){
-    this.speed = 0;
-    this.speedDecelerator = 0.1;
-    this.position = [canvasWidth/2, canvasHeight/2]
-    this.scoring = false;
+  Score()
+  {
+    setTimeout(() => {
+      player.kicking = true;
+      score += 1;
+      UpdateScore();
+      this.speedDecelerator = 0.2;
+      console.log(4);
+      setTimeout(() => {
+        this.speed = -10;
+        console.log(3);
+        setTimeout(() => {
+          this.speed = 0;
+          this.speedDecelerator = 0.1;
+          this.position = [canvasWidth / 2, canvasHeight / 2];
+          console.log(2);
+          setTimeout(() => {
+            console.log(1);
+            this.scoring = false;
+            player.kicking = false;
+          },500);
+        },500);
+      },500);
+    },500);
   }
 }
 
-/*
-function drawBall() {
-  ctx.drawImage(ball.graphic, ball.x - ball.radius, ball.y - ball.radius, ball.radius * 2, ball.radius * 2);
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-  ctx.fillStyle = 'white';
-  ctx.fill();
-}
-
-function moveBall() {
-  ball.x += ball.dx;
-  ball.y += ball.dy;
-}
-
-function bounceBall() {
-  // Detect boundaries
-  if(ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0)
-  {
-    ball.dx *= -1;
-  }
-  
-  if(ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0)
-  {
-    ball.dy *= -1;
-  }
-}
-
-function holdBall() {
-  
-  if(graphics.kicking)
-  {
-    graphics.holding = false;
-  }
-
-  if(graphics.holding)
-  {
-    if(mouse.x > ball.radius)
-    {
-      if(mouse.x < width - ball.radius)
-      {
-        ball.x = mouse.x + 20;
-      }
-      else
-      {
-        ball.x = width - ball.radius;
-      }
-    }
-    else
-    {
-      ball.x = ball.radius;
-    }
-
-    if(mouse.y > ball.radius)
-    {
-      if(mouse.y < height - ball.radius)
-      {
-        ball.y = mouse.y - ball.radius;
-      }
-      else
-      {
-        ball.y = height - ball.radius;
-      }
-    }
-    else
-    {
-      ball.y = ball.radius;
-    }
-  }
-
-  if(!graphics.kicking)
-  {
-    // hitbox
-    ctx.beginPath();
-    ctx.moveTo(mouse.x - 30, mouse.y - 10);
-    ctx.lineTo(mouse.x + 30, mouse.y - 10);
-    ctx.lineTo(mouse.x + 30, mouse.y);
-    ctx.lineTo(mouse.x - 30, mouse.y);
-    ctx.closePath();
-    ctx.stroke();
-
-    if(ball.x + ball.radius > mouse.x - ball.radius && ball.x - ball.radius < mouse.x + ball.radius)
-    {
-      if(ball.y + ball.radius > mouse.y - ball.radius && ball.y - ball.radius < mouse.y + ball.radius)
-      {
-        graphics.holding = true;
-        ball.dx = 0;
-        ball.dy = 0;
-      }
-    }
-  }
-}
-*/
-
+// Create Objects:
 // Goal
 const goal = new Goal(graphics.goal.graphic, graphics.goal.position, graphics.goal.size, 1);
-
-// Player Character
-const player = new Player();
-
-// Opponent Characters
+// Player
+const player = new Player(
+  graphics.player.graphic, 
+  graphics.player.size, 
+  graphics.player.hitboxHeight, 
+  graphics.player.kickStrength);
+// Opponents
 const opposingPlayers = [];
-for(let i = 0; i < graphics.characters.players.length; i++)
+for(let i = 0; i < graphics.opponents.players.length; i++)
 {
-  opposingPlayers.push(new Character(graphics.characters.graphic, graphics.characters.players[i].position[0], graphics.characters.players[i].position[1], graphics.characters.players[i].size[0] * graphics.characters.players[i].localSizeMultiplier * sizeMultiplier, graphics.characters.players[i].size[1] * graphics.characters.players[i].localSizeMultiplier * sizeMultiplier));
-  console.log("Opponent Added: " + opposingPlayers[i].position[0] + " : " + opposingPlayers[i].position[1]);
+  opposingPlayers.push(new Character(
+    graphics.opponents.graphic, 
+    graphics.opponents.players[i].position, 
+    graphics.opponents.players[i].size, 
+    graphics.opponents.players[i].speed,
+    graphics.opponents.players[i].speedDecrementor,
+    graphics.opponents.players[i].travelTime,
+    graphics.opponents.players[i].travelTimeDecrementor));
+  console.log("Opponent Added: " + opposingPlayers[i], opposingPlayers[i].position[0] + " : " + opposingPlayers[i].position[1]);
 }
-
 // Ball
 const ball = new Ball(graphics.ball.graphic, graphics.ball.position, graphics.ball.size, 0);
 
+// Update function that runs once per frame, running functions that updates positions, triggers actions and renders results
 function Update() {
-  // Clears canvas
+  // Need to clear the canvas lest a "hall of mirrors" effect results from previous frames bleeding over the current frame
   ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.drawImage(graphics.field.graphic, graphics.field.position[0], graphics.field.position[1], graphics.field.size[0], graphics.field.size[1]);
-  goal.DrawGoal();
-  
-  ball.DrawBall();
-  
-  // Update Player Character position and Draw
-  player.DrawPlayer();
-  
-  // Iterate through opposing characters, Update their positions and Draw
+
+  // Run all positional function updates
+  // Run function for movement logic for the ball object
+  ball.MoveBall();
+  // Check if the ball object entered the player object's hitbox
+  ball.CatchBall();
+  // Iterate through opposing characters and update their positions
   for(let i = 0; i < opposingPlayers.length; i++)
   {
-    opposingPlayers[i].position = [graphics.characters.players[i].position[0], graphics.characters.players[i].position[1]];
-    opposingPlayers[i].DrawCharacter();
     opposingPlayers[i].PatrolCharacter();
   }
+  
+  // Render
+  // Background "field" graphic first
+  ctx.drawImage(graphics.field.graphic, graphics.field.position[0], graphics.field.position[1], graphics.field.size[0], graphics.field.size[1]);
+  // "Goal post" object's graphic
+  goal.DrawGoal();
 
-  player.CatchBall(ball);
+  for(let i = 0; i < opposingPlayers.length; i++)
+  {
+    opposingPlayers[i].DrawCharacter();
+  }
 
-  player.HoldBall(ball);
+  
+  // Ball object's graphic
+  ball.DrawBall();
+  // Player object's graphic
+  player.DrawPlayer();
 
-  ball.MoveBall();
-
-  ball.Score(goal, player);
+  // Score
+  ctx.fillText("Score: " + score, canvasWidth / 2, canvasHeight - 22);
   
   requestAnimationFrame(Update); // reruns the update for animatability as opposed to running the update from here which would near instantly overflow the call stack.
+}
+
+function UpdateScore(){
 }
 
 // Event Listeners
@@ -529,6 +526,9 @@ addEventListener("mousemove", (event) => {
 });
 
 addEventListener('click', () => {
+  
+    console.log(ball.speed);
+    
     if(player.holding)
     {
       player.Kick(ball);

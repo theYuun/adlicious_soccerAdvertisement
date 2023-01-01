@@ -15,6 +15,7 @@ body{
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     min-height: 100vh;
     margin: 0;
+    text-align: center;
 }
 /*
 #field, #goal{
@@ -32,6 +33,6 @@ body{
     left: 50px;
 }
 */
-#ball, #character, #field, #goal{
+#ball, #character, #field, #goal, h2{
     display: none;
 }
