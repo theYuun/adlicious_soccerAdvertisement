@@ -1,4 +1,4 @@
-var dev = false;
+var dev = true;
 
 const pageWidth = document.body.clientWidth;
 const pageHeight = document.body.clientHeight;
@@ -7,7 +7,7 @@ const canvas = document.getElementById('canvas');
 const canvasWidth = canvas.width = 300;
 const canvasHeight = canvas.height = 600;
 
-const sizeMultiplier = 0.5;
+const sizeMultiplier = 0.4;
 
 const ctx = canvas.getContext('2d');
 
@@ -40,7 +40,7 @@ const graphics = {
   player: {
     graphic: document.getElementById('character'),
     size: [180, 240],
-    hitboxHeight: 10,
+    hitboxHeight: 50,
     kickStrength: 5,
   },
   opponents: {
@@ -51,20 +51,38 @@ const graphics = {
         size: [180, 240],
         speed: 2,
         speedDecrementor: 0.2,
-        travelTime: 1.5,
-        travelTimeDecrementor: 0.2,
+        travelTime: 0.8,
+        travelTimeDecrementor: 0.1,
+      },
+      {
+        position: [50, 200],
+        size: [180, 240],
+        speed: 2,
+        speedDecrementor: 0.5,
+        travelTime: 4,
+        travelTimeDecrementor: 0.1,
       },
       /*
-      {
-        position: [200, 200],
-        size: [180, 240],
-        speed: 10,
-      },
       */
     ],
   }
 };
 
+let isIntersecting = ((obj1, obj2) => 
+{
+  //console.log(obj1.hitbox, obj2.hitbox);
+
+  if(obj1.hitbox.bottom > obj2.hitbox.top &&
+    obj1.hitbox.right > obj2.hitbox.left &&
+    obj1.hitbox.top < obj2.hitbox.bottom &&
+    obj1.hitbox.left < obj2.hitbox.right)
+    {
+      //console.log('!')
+      return true;
+    }
+    //console.log('!!')
+    return false;
+});
 
 class Goal{
   constructor(graphic, position, size){
@@ -86,15 +104,10 @@ class Goal{
   xOffset;
   yOffset;
 
-  hitBox = {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  };
+  hitbox;
 
   CalculateHitbox(){
-    this.hitBox =
+    this.hitbox =
     {
       top:
         this.position[1] - this.yOffset,
@@ -106,17 +119,17 @@ class Goal{
         this.position[0] - this.xOffset + 5,
     };
   }
-
+  
   DrawGoal(){
     this.CalculateHitbox();
     
     if(dev)
     {
       ctx.beginPath();
-      ctx.moveTo(this.hitBox.left, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
-      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.moveTo(this.hitbox.left, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.bottom);
+      ctx.lineTo(this.hitbox.left, this.hitbox.bottom);
       ctx.closePath();
       ctx.stroke();
     }
@@ -133,35 +146,40 @@ class Player{
     this.hitboxHeight = hitboxHeight;
     this.kickStrength = kickStrength;
 
-    this.CalculateHitBox();
+    this.MovePlayer();
+    this.CalculateHitbox();
   }
 
   graphic;
   size;
+  position;
   hitboxHeight = 10;
   kicking = false;
   holding = false;
   kickStrength;
 
-  hitbox = {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  }
+  hitbox;
 
-  CalculateHitBox(){
+  CalculateHitbox(){
     this.hitbox = {
-      top: mouse.y - this.hitboxHeight * sizeMultiplier,
-      right: mouse.x + this.size[0] / 2 * 0.6 * sizeMultiplier,
-      bottom: mouse.y,
-      left: mouse.x - this.size[0] / 2 * 0.6 * sizeMultiplier,
+      top:
+      this.position[1] - this.hitboxHeight * sizeMultiplier,
+      right:
+      this.position[0] + this.size[0] / 2 * 0.6 * sizeMultiplier,
+      bottom:
+      this.position[1],
+      left:
+      this.position[0] - this.size[0] / 2 * 0.6 * sizeMultiplier,
     }
   }
-
+  
+  MovePlayer() {
+    this.position = [mouse.x, mouse.y];
+    this.CalculateHitbox();
+  }
+  
   DrawPlayer() {
 
-    this.CalculateHitBox();
     if(dev)
     {
       // hitbox
@@ -203,6 +221,7 @@ class Character {
     this.tempSpeed = speed;
     this.speedDecrementor = speedDecrementor;
     this.travelTime = travelTime;
+    this.travelTimeTemp = travelTime;
     this.travelTimeDecrementor = travelTimeDecrementor;
 
     this.xOffset = this.size[0] / 2 * sizeMultiplier;
@@ -211,30 +230,25 @@ class Character {
   }
 
   graphic;
-  position = [];
-  size = [];
-  speed = 0;
+  position;
+  size;
+  speed;
 
-  xOffset = 0;
-  yOffset = 0;
+  xOffset;
+  yOffset;
   
-  hitBox = {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  };
+  hitbox;
 
-  patrolPosition = 0;
-  tempSpeed = 0;
+  patrolPosition;
+  tempSpeed;
+  speedDecrementor;
 
-  travelTime = 2;
-  travelTimeTemp = this.travelTime;
-  travelTimeDecrementor = 0.1;
-  speedDecrementor = 0.2;
+  travelTime;
+  travelTimeTemp;
+  travelTimeDecrementor;
 
   CalculateHitbox(){
-    this.hitBox =
+    this.hitbox =
     {
       top:
         this.position[1] - this.yOffset,
@@ -254,16 +268,17 @@ class Character {
     {
       // hitbox
       ctx.beginPath();
-      ctx.moveTo(this.hitBox.left, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
-      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.moveTo(this.hitbox.left, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.bottom);
+      ctx.lineTo(this.hitbox.left, this.hitbox.bottom);
       ctx.closePath();
       ctx.stroke();
     }
 
     ctx.drawImage(this.graphic, this.position[0] - this.xOffset, this.position[1] - this.yOffset, this.size[0] * sizeMultiplier, this.size[1] * sizeMultiplier);
   }
+
   PatrolCharacter(){
 
     this.position[0] += this.tempSpeed;
@@ -286,6 +301,10 @@ class Character {
         {
           this.tempSpeed = this.speed;
         }
+      }
+      else if(this.tempSpeed == 0)
+      {
+        this.tempSpeed = canvasWidth - this.hitbox.right > this.hitbox.left ? this.speed : -this.speed;
       }
       this.travelTimeTemp = this.travelTime;
     }
@@ -311,7 +330,7 @@ class Ball{
   speed;
   xOffset;
   yOffset;
-  hitBox = {
+  hitbox = {
     top: 0,
     right: 0,
     bottom: 0,
@@ -319,23 +338,23 @@ class Ball{
   };
 
   speedDecelerator = 0.1;
-  scoring = false;
+  resetting = false;
 
   ballRotation = 0;
 
   DrawBall()
   {
     this.CalculateHitbox();
-    //console.log(this.hitBox);
+    //console.log(this.hitbox);
 
     if(dev)
     {
       // Draw Hitbox
       ctx.beginPath();
-      ctx.moveTo(this.hitBox.left, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.top);
-      ctx.lineTo(this.hitBox.right, this.hitBox.bottom);
-      ctx.lineTo(this.hitBox.left, this.hitBox.bottom);
+      ctx.moveTo(this.hitbox.left, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.top);
+      ctx.lineTo(this.hitbox.right, this.hitbox.bottom);
+      ctx.lineTo(this.hitbox.left, this.hitbox.bottom);
       ctx.closePath();
       ctx.stroke();
     }
@@ -357,10 +376,6 @@ class Ball{
     {
       this.speed = 0;
       this.position = [mouse.x, mouse.y - this.size[1]/2 * sizeMultiplier];
-      if(!player.kicking)
-      {
-        this.holding = false;
-      }
     }
     else
     {
@@ -382,35 +397,61 @@ class Ball{
         this.speed = 0;
       }
       
-      if(this.hitBox.top < goal.hitBox.bottom &&
-        this.hitBox.right > goal.hitBox.left &&
-        this.hitBox.left < goal.hitBox.right)
+      if(isIntersecting(this, goal)
+        /*
+        this.hitbox.top < goal.hitbox.bottom &&
+        this.hitbox.right > goal.hitbox.left &&
+        this.hitbox.left < goal.hitbox.right
+        */
+       )
       {
-        if(this.scoring)
+        if(this.resetting)
           return;
-        this.scoring = true;
-        this.Score();
+        this.resetting = true;
+        this.ResetBall(true);
       }
     }
+
+    opposingPlayers.forEach(character => {
+      if(isIntersecting(this, character))
+      {
+        player.holding = false;
+        player.kicking = true;
+        if(this.resetting)
+          return;
+        this.resetting = true;
+        console.log('Caught');
+        this.ResetBall(false);
+      }
+    });
   }
 
   CatchBall()
   {
     if(!player.kicking)
     {
-      if(player.hitbox.bottom > this.hitBox.top &&
-      player.hitbox.right > this.hitBox.left &&
-      player.hitbox.top < this.hitBox.bottom &&
-      player.hitbox.left < this.hitBox.right)
+      player.holding = isIntersecting(this, player);
+      /*
+      if(isIntersecting(this, player))
       {
         player.holding = true;
       }
+      
+      if(
+        player.hitbox.bottom > this.hitbox.top &&
+        player.hitbox.right > this.hitbox.left &&
+        player.hitbox.top < this.hitbox.bottom &&
+        player.hitbox.left < this.hitbox.right)
+        {
+          player.holding = true;
+        }
+      */
     }
   }
 
   CalculateHitbox()
   {
-    this.hitBox =
+    this.hitbox =
     {
       top:
         this.position[1] - this.yOffset,
@@ -422,25 +463,26 @@ class Ball{
         this.position[0] - this.xOffset,
     }
   }
-  Score()
+
+  ResetBall(scored)
   {
     setTimeout(() => {
       player.kicking = true;
-      score += 1;
+      scored ? score += 1 : score = 0;
       UpdateScore();
       this.speedDecelerator = 0.2;
-      console.log(4);
+      console.log('Ball entered Goal, made non-interactive');
       setTimeout(() => {
         this.speed = -10;
-        console.log(3);
+        console.log('Ball taken from field');
         setTimeout(() => {
           this.speed = 0;
           this.speedDecelerator = 0.1;
           this.position = [canvasWidth / 2, canvasHeight / 2];
-          console.log(2);
+          console.log('Ball reset');
           setTimeout(() => {
-            console.log(1);
-            this.scoring = false;
+            console.log('Ball made interactive');
+            this.resetting = false;
             player.kicking = false;
           },500);
         },500);
@@ -481,6 +523,7 @@ function Update() {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
   // Run all positional function updates
+  player.MovePlayer();
   // Run function for movement logic for the ball object
   ball.MoveBall();
   // Check if the ball object entered the player object's hitbox
@@ -527,7 +570,7 @@ addEventListener("mousemove", (event) => {
 
 addEventListener('click', () => {
   
-    console.log(ball.speed);
+    //console.log(ball.speed);
     
     if(player.holding)
     {
