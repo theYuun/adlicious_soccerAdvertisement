@@ -2,22 +2,25 @@ const pageWidth = document.body.clientWidth;
 const pageHeight = document.body.clientHeight;
 
 const canvas = document.getElementById('canvas');
-const canvasWidth = canvas.width = 300;
-const canvasHeight = canvas.height = 600;
+let canvasWidth = canvas.width = 300;
+let canvasHeight = canvas.height = 100;
 
 const sizeMultiplier = 0.4;
 
 const ctx = canvas.getContext('2d');
 
+let isPlaying = false;
 let score = 0;
 ctx.font = "bold 30px Trebuchet MS";
 ctx.textAlign = "center";
 ctx.fillStyle = "white";
+ctx.fillText("Click to play", canvasWidth / 2, 60);
 
 // Reference to the mouse position
 const mouse = {
     x: 0,
     y: 0,
+    active: false,
 };
 
 // An object that holds all the details for objects that will spawn onto the field
@@ -271,7 +274,7 @@ class Player{
   }
   
   // Draw the player
-  DrawPlayer() {
+  Draw() {
 
     DrawHitbox(this.hitbox, [50, 50, 255])
 
@@ -343,7 +346,7 @@ class Opponent{
     }
   }
 
-  DrawCharacter(){
+  Draw(){
     this.CalculateHitbox();
     
     DrawHitbox(this.hitbox, [255, 100, 100]);
@@ -425,7 +428,7 @@ class Ball{
   resetting = false;
   
   // Draw the ball
-  DrawBall()
+  Draw()
   {
     this.CalculateHitbox();
 
@@ -567,6 +570,7 @@ const player = new Player(
   graphics.player.size, 
   graphics.player.hitboxHeight, 
   graphics.player.kickStrength);
+  
 // Opponents
 const opposingPlayers = [];
 for(let i = 0; i < graphics.opponents.players.length; i++)
@@ -610,36 +614,78 @@ function Update() {
   // Opponents
   for(let i = 0; i < opposingPlayers.length; i++)
   {
-    opposingPlayers[i].DrawCharacter();
+    opposingPlayers[i].Draw();
   }
 
   // Ball
-  ball.DrawBall();
+  ball.Draw();
   
   // Player
-  player.DrawPlayer();
+  player.Draw();
 
   // Score
+  ctx.textAlign = "center";
+  ctx.font = "normal 30px Trebuchet MS";
   ctx.fillStyle = "rgb(255, 255, 255)";
-  ctx.fillText("Score: " + score, canvasWidth / 2, canvasHeight - 22);
+  ctx.fillText("Score: " + score, canvasWidth / 2, canvasHeight - 20);
   
   requestAnimationFrame(Update); // reruns the update for animatability as opposed to running the update from here which would near instantly overflow the call stack.
 }
 
 // Event Listeners
 addEventListener("mousemove", (event) => {
-  
-  mouse.x = event.clientX - (pageWidth - canvasWidth) / 2;
-  mouse.y = (event.clientY - (pageHeight - canvasHeight) / 2) - 40; // Not sure what the 40 is about, I suspect it's for the h1 element
-
+  if(mouse.active)
+  {
+    mouse.x = event.clientX - (pageWidth - canvasWidth) / 2;
+    mouse.y = (event.clientY - (pageHeight - canvasHeight) / 2) - 40; // Not sure what the 40 is about, I suspect it's for the h1 element
+  }
 });
 
 addEventListener('click', () => {
-    
-    if(player.holding)
+    if(!isPlaying)
     {
-      player.Kick(ball);
+      canvas.height = 600;
+      
+      setTimeout(() => {
+        // field
+        field.Draw();
+        setTimeout(() => {
+          // goal
+          goal.Draw();
+          setTimeout(() => {
+            // opponents
+            for(let i = 0; i < graphics.opponents.players.length; i++)
+            {
+              opposingPlayers[i].Draw();
+            }
+            setTimeout(() => {
+              // player
+              canvasHeight = canvas.height;
+              //player.position = [canvasWidth / 2, canvasHeight / 2];
+              mouse.x = canvasWidth / 2;
+              mouse.y = canvasHeight / 2 + 120;
+              player.Draw();
+              setTimeout(() => { 
+                // ball
+                ball.position[1] = canvasHeight / 2;
+                ball.Draw();
+                setTimeout(() => {
+                  // start
+                  mouse.active = true;
+                  isPlaying = true;
+                  Update();
+                }, 500);
+              }, 500);
+            }, 500);
+          }, 500);
+        }, 500);
+      }, 500);
+    }
+    else
+    {
+      if(player.holding)
+      {
+        player.Kick(ball);
+      }
     }
 });
-
-Update();
