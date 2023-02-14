@@ -35,7 +35,7 @@ const graphics = {
   goal: {
     graphic: document.getElementById('goal'),
     size: [150, 70],
-    position: [150, 35],
+    position: [canvasWidth / 2, 35],
     isDynamic: true,
     resistance: 0.3,
   },
@@ -627,7 +627,7 @@ function Update() {
   ctx.textAlign = "center";
   ctx.font = "normal 30px Trebuchet MS";
   ctx.fillStyle = "rgb(255, 255, 255)";
-  ctx.fillText("Score: " + score, canvasWidth / 2, canvasHeight - 20);
+  ctx.fillText("Score: " + score, canvasWidth / 2, canvasHeight - 55);
   
   requestAnimationFrame(Update); // reruns the update for animatability as opposed to running the update from here which would near instantly overflow the call stack.
 }
@@ -644,7 +644,7 @@ addEventListener("mousemove", (event) => {
 addEventListener('click', () => {
     if(!isPlaying)
     {
-      canvas.height = 600;
+      canvas.height = graphics.field.size[1];
       
       setTimeout(() => {
         // field
